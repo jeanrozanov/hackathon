@@ -1,13 +1,15 @@
 import pygame as pg
 import random
 
-
 FPS = 60
-WIDTH, HEIGHT = 2000, 1000
+WIDTH, HEIGHT = 1500, 1000
 speed = 4
+GREEN = (0, 209, 19)
+BLUE = (0, 217, 209)
+WHITE = (255, 255, 255)
 
 
-class Player: # персонаж, игрок. им можно управлять, он может стрелять в монстров и таскать ресурсы
+class Player:  # персонаж, игрок, им можно управлять, он может стрелять в монстров и таскать ресурсы
     def __init__(self):
         self.surf = pg.image.load('images/player.png').convert_alpha()
         self.image = pg.transform.scale(
@@ -28,37 +30,73 @@ class Player: # персонаж, игрок. им можно управлять
         screen.blit(self.image, self.rect)
 
 
-class Diamond: # в опасной зоне будут полезные ископаемые. их можно будет продавать для покупки оружия и не только
-    # не обязательно именно алмазы! можно сделать разновидность ресурсов, с разными ценами и свойствами
+class Gem:  # в опасной зоне будут полезные ископаемые, их можно будет продавать для покупки оружия и не только
+    # можно сделать разновидность ресурсов, с разными ценами и свойствами
     def __init__(self):
         self.image = pg.image.load("images/diamond.png").convert_alpha()
         self.image = pg.transform.scale(
-            self.image,
-            (self.image.get_width() // 9, self.image.get_height() // 9)
-        )
+            self.image, (self.image.get_width() / 9, self.image.get_height() / 9))
+        self.purple = pg.image.load('images/purple_stone.png').convert_alpha()
+        self.purple = pg.transform.scale(
+            self.purple, (self.purple.get_width() / 6, self.purple.get_height() / 6))
 
-        x = random.randint(WIDTH // 2 + 50, WIDTH - 50)
-        y = random.randint(50, HEIGHT - 50)
-        self.rect = self.image.get_rect(center=(x, y))
+        x1, y1 = random.randint(WIDTH // 2 + 50, WIDTH - 50), random.randint(50, HEIGHT - 50)
+        x2, y2 = random.randint(WIDTH // 2 + 50, WIDTH - 50), random.randint(50, HEIGHT - 50)
+        self.rect = self.image.get_rect(center=(x1, y1))
+        self.rect_purple = self.purple.get_rect(center=(x2, y2))
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
+        screen.blit(self.purple, self.rect_purple)
 
 
-class Shop: # магазин, можно купить оружие и апгрейд для персонажа, а также продать ресурсы
+class Shop:  # магазин, можно купить оружие и апгрейд для персонажа, а также продать ресурсы
     def __init__(self):
         self.image = pg.image.load('images/shop.png').convert_alpha()
         self.image = pg.transform.scale(
             self.image,
-            (self.image.get_width() // 4, self.image.get_height() // 4)
+            (self.image.get_width() / 4, self.image.get_height() / 4)
         )
-        self.rect = self.image.get_rect(center=(WIDTH // 6, HEIGHT // 6))
+        self.rect = self.image.get_rect(center=(WIDTH / 6, HEIGHT / 6))
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
 
 
-class Border: # граница, позволяет выйти в опасную зону и обратно
+class Enemy:
+    COLOR = (255, 0, 0)
+    WIDTH, HEIGHT = 100, 100
+    SPEED = 2
+
+    def __init__(self):
+        self.surf = pg.Surface((Enemy.WIDTH, Enemy.HEIGHT), pg.SRCALPHA)
+        self.rect = self.surf.get_rect(center=(WIDTH / 2, HEIGHT / 2))
+        self.speed = 2
+        self.mask = pg.mask.from_surface(self.surf)
+        self.surf.fill((0, 0, 0, 0))
+        pg.draw.circle(self.surf, (*Enemy.COLOR, 255),
+                       (self.rect.width / 2, self.rect.height / 2), 30)
+
+    def draw(self, screen):
+        screen.blit(self.surf, self.rect)
+
+    def check(self, player):  # По возможности оптимизировать
+        x, y = player.center()
+        if player.rect.centerx > self.rect.centerx:
+            if player.rect.left > self.rect.right:
+                self.rect.x += 1 * self.speed
+        if player.rect.centerx < self.rect.centerx:
+            if player.rect.right < self.rect.left:
+                self.rect.x -= 1 * self.speed
+        if player.rect.centery < self.rect.centery:
+            if player.rect.bottom < self.rect.top:
+                self.rect.y -= 1 * self.speed
+        if player.rect.centery > self.rect.centery:
+            if player.rect.top > self.rect.bottom:
+                self.rect.y += 1 * self.speed
+
+
+class Border:  # граница, позволяет выйти в опасную зону и обратно
     def __init__(self):
         self.image = pg.image.load('images/border.png').convert_alpha()
         self.image = pg.transform.scale(
@@ -76,17 +114,17 @@ def check_collision(a, b):
     return a.rect.colliderect(b.rect)
 
 
-
 pg.init()
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 clock = pg.time.Clock()
 
-background = pg.image.load('images/test_backgr.png') # задний фон
+background = pg.image.load('images/test_backgr.png')  # задний фон
 background = pg.transform.scale(background, (WIDTH, HEIGHT))
 
 player = Player()
 border = Border()
 shop = Shop()
+enemy = Enemy()
 
 font = pg.font.SysFont(None, 36)
 
@@ -94,19 +132,20 @@ current_zone = "safe"
 inventory = 0
 money = 0
 
-diamonds = []
+gems = []
 spawn_timer = 0
 
 shop_open = False
 tutorial_open = True
+inventory_full = False
 
-running = True
-while running:
+flag_play = True
+while flag_play:
     clock.tick(FPS)
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
-            running = False
+            flag_play = False
 
         if event.type == pg.KEYDOWN:
 
@@ -128,11 +167,14 @@ while running:
                     elif check_collision(shop, player):
                         shop_open = not shop_open
 
-                # подбор алмазов на R
+                # подбор ресурсов на R
                 if event.key == pg.K_r:
-                    for d in diamonds[:]:
-                        if player.rect.colliderect(d.rect):
-                            diamonds.remove(d)
+                    for d in gems[:]:
+                        if player.rect.colliderect(d.rect) and not inventory_full:
+                            gems.remove(d)
+                            inventory += 1
+                        if player.rect.colliderect(d.rect_purple) and not inventory_full:
+                            gems.remove(d)
                             inventory += 1
 
                 # продажа
@@ -155,16 +197,16 @@ while running:
                 player.move(dy=-1)
 
         # граница
-        if current_zone == "safe" and player.rect.centerx > WIDTH // 2:
-            player.rect.centerx = WIDTH // 2 - 5
-        if current_zone == "danger" and player.rect.centerx < WIDTH // 2:
-            player.rect.centerx = WIDTH // 2 + 5
+        if current_zone == "safe" and player.rect.centerx > WIDTH / 2:
+            player.rect.centerx = WIDTH / 2 - 5
+        if current_zone == "danger" and player.rect.centerx < WIDTH / 2:
+            player.rect.centerx = WIDTH / 2 + 5
 
         # спавн
         if current_zone == "danger":
             spawn_timer += 1
-            if spawn_timer > 120:
-                diamonds.append(Diamond())
+            if spawn_timer > 50:  # тестовое значение, потом изменится
+                gems.append(Gem())
                 spawn_timer = 0
 
     # отрисовка
@@ -179,7 +221,7 @@ while running:
     border.draw(screen)
     shop.draw(screen)
 
-    for d in diamonds:
+    for d in gems:
         d.draw(screen)
 
     player.draw(screen)
@@ -187,35 +229,44 @@ while running:
     # подсказки
     if not tutorial_open:
 
-        if check_collision(border, player):
-            screen.blit(font.render("E - перейти", True, (255,255,255)),
-                        (player.rect.x, player.rect.y - 40))
+        if check_collision(border, player):  # подсказка для перехода
+            screen.blit(font.render("E - перейти", True, WHITE),
+                        (player.rect.x, player.rect.y - 10))
 
-        if check_collision(shop, player):
-            screen.blit(font.render("E - магазин", True, (255,255,255)),
+        if check_collision(shop, player):  # подсказка для магазина
+            screen.blit(font.render("E - магазин", True, WHITE),
                         (player.rect.x, player.rect.y - 70))
 
         # подсказка для алмазов
-        for d in diamonds:
+        for d in gems:
             if player.rect.colliderect(d.rect.inflate(40, 40)):
-                screen.blit(font.render("R - взять", True, (255,255,255)),
+                screen.blit(font.render("R - взять", True, WHITE),
                             (d.rect.x, d.rect.y - 30))
+            if player.rect.colliderect(d.rect_purple.inflate(40, 40)):
+                screen.blit(font.render("R - взять", True, WHITE),
+                            (d.rect_purple.x, d.rect_purple.y - 30))
 
-        screen.blit(font.render(f"Алмазы: {inventory}", True, (255,255,255)), (20, 20))
-        screen.blit(font.render(f"Деньги: {money}", True, (255,255,255)), (20, 60))
+        screen.blit(font.render(f"Алмазы: {inventory}", True, BLUE), (20, 20))
+        screen.blit(font.render(f"Деньги: {money}", True, GREEN), (20, 60))
+        if inventory >= 5:
+            inventory_full = True
+            screen.blit(font.render("Инвентарь полон! Продайте собранные", True, WHITE),
+                        (player.rect.x, player.rect.y - 70))
+            screen.blit(font.render("ресурсы или улучшите мешок", True, WHITE),
+                        (player.rect.x, player.rect.y - 40))
 
     # экран магазина
     if shop_open:
         panel = pg.Surface((600, 300))
         panel.fill((30, 30, 30))
-        screen.blit(panel, (WIDTH//2 - 300, HEIGHT//2 - 150))
+        screen.blit(panel, (WIDTH / 2 - 300, HEIGHT / 2 - 150))
 
-        screen.blit(font.render("МАГАЗИН", True, (255,255,255)),
-                    (WIDTH//2 - 80, HEIGHT//2 - 120))
-        screen.blit(font.render("SPACE - продать все", True, (255,255,255)),
-                    (WIDTH//2 - 200, HEIGHT//2))
-        screen.blit(font.render(f"У тебя: {inventory}", True, (255,255,255)),
-                    (WIDTH//2 - 100, HEIGHT//2 + 50))
+        screen.blit(font.render("МАГАЗИН", True, WHITE),
+                    (WIDTH / 2 - 80, HEIGHT / 2 - 120))
+        screen.blit(font.render("SPACE - продать все", True, WHITE),
+                    (WIDTH / 2 - 200, HEIGHT / 2))
+        screen.blit(font.render(f"У тебя: {inventory}", True, WHITE),
+                    (WIDTH / 2 - 100, HEIGHT / 2 + 50))
 
     # обучение
     if tutorial_open:
@@ -239,8 +290,8 @@ while running:
         ]
 
         for i, line in enumerate(lines):
-            text = font.render(line, True, (255, 255, 255))
-            screen.blit(text, (WIDTH//2 - 300, 200 + i*40))
+            text = font.render(line, True, WHITE)
+            screen.blit(text, (WIDTH / 2 - 300, 200 + i * 40))
 
     pg.display.update()
 
