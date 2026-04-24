@@ -36,18 +36,27 @@ class Gem:  # в опасной зоне будут полезные ископ�
         self.image = pg.image.load("images/diamond.png").convert_alpha()
         self.image = pg.transform.scale(
             self.image, (self.image.get_width() / 9, self.image.get_height() / 9))
+
         self.purple = pg.image.load('images/purple_stone.png').convert_alpha()
         self.purple = pg.transform.scale(
-            self.purple, (self.purple.get_width() / 6, self.purple.get_height() / 6))
+            self.purple, (self.purple.get_width() / 4, self.purple.get_height() / 4))
+
+        self.emerald = pg.image.load("images/emerald.png").convert_alpha()
+        self.emerald = pg.transform.scale(
+            self.emerald, (self.emerald.get_width() / 8, self.emerald.get_height() / 8))
+
 
         x1, y1 = random.randint(WIDTH // 2 + 50, WIDTH - 50), random.randint(50, HEIGHT - 50)
         x2, y2 = random.randint(WIDTH // 2 + 50, WIDTH - 50), random.randint(50, HEIGHT - 50)
+        x3, y3 = random.randint(WIDTH // 2 + 50, WIDTH - 50), random.randint(50, HEIGHT - 50)
         self.rect = self.image.get_rect(center=(x1, y1))
-        self.rect_purple = self.purple.get_rect(center=(x2, y2))
+        self.purple_rect = self.purple.get_rect(center=(x2, y2))
+        self.emerald_rect = self.emerald.get_rect(center=(x3, y3))
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
-        screen.blit(self.purple, self.rect_purple)
+        screen.blit(self.purple, self.purple_rect)
+        screen.blit(self.emerald, self.emerald_rect)
 
 
 class Shop:  # магазин, можно купить оружие и апгрейд для персонажа, а также продать ресурсы
@@ -173,7 +182,7 @@ while flag_play:
                         if player.rect.colliderect(d.rect) and not inventory_full:
                             gems.remove(d)
                             inventory += 1
-                        if player.rect.colliderect(d.rect_purple) and not inventory_full:
+                        if player.rect.colliderect(d.purple_rect) and not inventory_full:
                             gems.remove(d)
                             inventory += 1
 
@@ -242,9 +251,9 @@ while flag_play:
             if player.rect.colliderect(d.rect.inflate(40, 40)):
                 screen.blit(font.render("R - взять", True, WHITE),
                             (d.rect.x, d.rect.y - 30))
-            if player.rect.colliderect(d.rect_purple.inflate(40, 40)):
+            if player.rect.colliderect(d.purple_rect.inflate(40, 40)):
                 screen.blit(font.render("R - взять", True, WHITE),
-                            (d.rect_purple.x, d.rect_purple.y - 30))
+                            (d.purple_rect.x, d.purple_rect.y - 30))
 
         screen.blit(font.render(f"Алмазы: {inventory}", True, BLUE), (20, 20))
         screen.blit(font.render(f"Деньги: {money}", True, GREEN), (20, 60))
