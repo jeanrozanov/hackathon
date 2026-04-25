@@ -135,7 +135,7 @@ class Border: # граница, нужна для перехода между з
         screen.blit(self.img, self.rect) # отрисовка
 
 
-def mask_collide(a, b):
+def mask_collide(a, b): # общая функция для точных коллизий
     offset = (b.rect.x - a.rect.x, b.rect.y - a.rect.y)
     return a.mask.overlap(b.mask, offset)
 
@@ -155,9 +155,9 @@ weapons = [
 ]
 current_weapon = weapons[0]
 
-pause_sound = pg.mixer.Sound('sounds/pause_sound.wav')
-pistol_sound = pg.mixer.Sound('sounds/pistol_shot.wav')
-grab_sound = pg.mixer.Sound('sounds/grab_sound.wav')
+pause_sound = pg.mixer.Sound('sounds/pause_sound.wav') # звук паузы
+pistol_sound = pg.mixer.Sound('sounds/pistol_shot.wav') # звук выстрела
+grab_sound = pg.mixer.Sound('sounds/grab_sound.wav') # звук взятия предмета
 
 bullets = []
 gems = []
@@ -188,9 +188,10 @@ while running:
 
         if event.type == pg.KEYDOWN:
 
-            if tutorial and event.key == pg.K_SPACE:
+            if tutorial and event.key == pg.K_SPACE: # при нажатии на пробел обучение закрывается
                 tutorial = False
 
+            # при нажатии на ESC игра ставится на паузу и обратно
             elif event.key == pg.K_ESCAPE and not tutorial:
                 paused = not paused
                 pause_sound.play()
@@ -216,15 +217,15 @@ while running:
                             gems.remove(g)
                             inventory += 1
 
-                if shop_open and event.key == pg.K_SPACE:
+                if shop_open and event.key == pg.K_SPACE: # если магазин открыт, на ПРОБЕЛ продаем камни
                     money += inventory * 10
                     inventory = 0
 
-                if shop_open and event.key == pg.K_h and money >= 30:
+                if shop_open and event.key == pg.K_h and money >= 30: # восстанавливаем здоровье
                     hp = min(max_hp, hp + 50)
                     money -= 30
 
-                if shop_open and event.key == pg.K_f and money >= 50:
+                if shop_open and event.key == pg.K_f and money >= 50: # улучшаем мешок
                     inventory_limit += 5
                     money -= 50
 
@@ -233,14 +234,14 @@ while running:
                         current_weapon = w
                         money -= w.price
 
-    if not tutorial and not paused:
+    if not tutorial and not paused: # если мы не в обучении и игра не на паузе, можно играть
 
         if not shop_open:
-            k = pg.key.get_pressed()
-            if k[pg.K_d]: player.move(1)
-            if k[pg.K_a]: player.move(-1)
-            if k[pg.K_w]: player.move(0, -1)
-            if k[pg.K_s]: player.move(0, 1)
+            keys = pg.key.get_pressed()
+            if keys[pg.K_d]: player.move(1)
+            if keys[pg.K_a]: player.move(-1)
+            if keys[pg.K_w]: player.move(0, -1)
+            if keys[pg.K_s]: player.move(0, 1)
 
         if zone == "safe" and player.rect.centerx > WIDTH // 2:
             player.rect.centerx = WIDTH // 2 - 5
@@ -283,32 +284,32 @@ while running:
 
             shoot_cd = current_weapon.cooldown
 
-        for b in bullets[:]:
-            b.update()
+        for bullet in bullets[:]:
+            bullet.update()
 
             for en in enemies[:]:
-                if mask_collide(b, en):
+                if mask_collide(bullet, en):
                     enemies.remove(en)
-                    bullets.remove(b)
+                    bullets.remove(bullet)
                     break
 
-            if not screen.get_rect().colliderect(b.rect):
-                bullets.remove(b)
+            if not screen.get_rect().colliderect(bullet.rect):
+                bullets.remove(bullet)
 
     screen.blit(background, (0, 0))
 
     if zone == "danger":
-        s = pg.Surface((WIDTH, HEIGHT))
-        s.set_alpha(120)
-        s.fill((60, 0, 80))
-        screen.blit(s, (0, 0))
+        screen = pg.Surface((WIDTH, HEIGHT))
+        screen.set_alpha(120)
+        screen.fill((60, 0, 80))
+        screen.blit(screen, (0, 0))
 
     border.draw(screen)
     shop.draw(screen)
 
     for g in gems: g.draw(screen)
     for en in enemies: en.draw(screen)
-    for b in bullets: b.draw(screen)
+    for bullet in bullets: bullet.draw(screen)
 
     player.draw(screen)
 
@@ -346,10 +347,10 @@ while running:
                     (WIDTH // 2 - 200, HEIGHT // 2 + 200))
 
     if tutorial:
-        s = pg.Surface((WIDTH, HEIGHT))
-        s.set_alpha(220)
-        s.fill((0, 0, 0))
-        screen.blit(s, (0, 0))
+        screen = pg.Surface((WIDTH, HEIGHT))
+        screen.set_alpha(220)
+        screen.fill((0, 0, 0))
+        screen.blit(screen, (0, 0))
 
         txt = ["WASD - движение", "E - взаимодействие", "R - взять", "M1 - стрелять", "ESC - пауза",
                "SPACE - старт игры"]
@@ -357,10 +358,10 @@ while running:
             screen.blit(font.render(t, True, WHITE), (WIDTH // 2 - 200, 300 + i * 50))
 
     if paused:
-        s = pg.Surface((WIDTH, HEIGHT))
-        s.set_alpha(180)
-        s.fill((0, 0, 0))
-        screen.blit(s, (0, 0))
+        screen = pg.Surface((WIDTH, HEIGHT))
+        screen.set_alpha(180)
+        screen.fill((0, 0, 0))
+        screen.blit(screen, (0, 0))
         screen.blit(font.render("Пауза", True, WHITE), (WIDTH // 2 - 80, HEIGHT // 2 - 40))
         screen.blit(font.render("ESC - продолжить", True, WHITE), (WIDTH // 2 - 150, HEIGHT // 2 + 20))
 
