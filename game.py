@@ -4,11 +4,16 @@ import math
 
 pg.init()
 
-pg.mixer.music.load('sounds/background_music.wav')
-pg.mixer.music.play(-1)
 FPS = 60
 WIDTH, HEIGHT = 1900, 1000
 speed = 4
+
+pg.mixer.music.load('sounds/background_music.wav')
+pg.mixer.music.play(-1)
+
+pause_sound = pg.mixer.Sound('sounds/pause_sound.wav') # звук паузы
+pistol_sound = pg.mixer.Sound('sounds/pistol_shot.wav') # звук выстрела
+grab_sound = pg.mixer.Sound('sounds/grab_sound.wav') # звук взятия предмета
 
 # основные цвета интерфейса
 WHITE = (255, 255, 255)
@@ -108,7 +113,8 @@ class Enemy:
     def __init__(self, chaos=False):
         # враги становятся быстрее и сильнее в режиме "без правил"
         img = pg.image.load('images/enemy.png').convert_alpha()
-        self.img = pg.transform.scale(img, (img.get_width() // 9, img.get_height() // 9))
+        self.img = pg.transform.flip(img, True, False)
+        self.img = pg.transform.scale(self.img, (self.img.get_width() // 9, self.img.get_height() // 9))
         x = random.randint(WIDTH // 2 + 50, WIDTH - 50)
         y = random.randint(50, HEIGHT - 50)
         self.rect = self.img.get_rect(center=(x, y))
@@ -163,7 +169,7 @@ class Weapon:
 
 class Bullet:
     def __init__(self, x, y, tx, ty, bul_speed, damage):
-        # простая пуля как круг
+        # простая пуля круг
         self.img = pg.Surface((6, 6), pg.SRCALPHA)
         pg.draw.circle(self.img, (255, 220, 50), (3, 3), 3)
         self.rect = self.img.get_rect(center=(x, y))
@@ -271,6 +277,7 @@ while running:
                 tutorial = False
 
             elif event.key == pg.K_ESCAPE and not tutorial:
+                pause_sound.play()
                 paused = not paused
 
             if not tutorial and not paused:
@@ -289,6 +296,7 @@ while running:
 
                 # подбор камней
                 if event.key == pg.K_r:
+                    grab_sound.play()
                     for g in gems[:]:
                         if mask_collide(player, g) and inventory < inventory_limit:
                             gems.remove(g)
@@ -322,7 +330,7 @@ while running:
             game_minutes += 1
             time_tick = 0
 
-        # запуск chaos события раз в сутки
+        # запуск события "без правил" раз в сутки
         if game_minutes >= 24 * 60:
             chaos_event = True
             game_minutes = 0
@@ -365,6 +373,7 @@ while running:
             shoot_cd -= 1
 
         if pg.mouse.get_pressed()[0] and shoot_cd == 0 and not shop_open:
+            pistol_sound.play()
             mx, my = pg.mouse.get_pos()
 
             # дробовик стреляет веером
@@ -434,6 +443,26 @@ while running:
         screen.blit(panel, (WIDTH // 2 - 450, HEIGHT // 2 - 275))
 
         screen.blit(font.render("Магазин", True, WHITE), (WIDTH // 2 - 40, HEIGHT // 2 - 250))
+
+        for i, w in enumerate(weapons):
+            x = WIDTH // 2 - 400 + i * 200
+            y = HEIGHT // 2 - 150
+
+            r = pg.Rect(x, y, 180, 220)
+            pg.draw.rect(screen, CARD, r)
+            pg.draw.rect(screen, WHITE, r, 2)
+
+            screen.blit(font.render(w.name, True, WHITE), (x + 20, y + 10))
+            screen.blit(font.render(f"Урон {w.damage}", True, WHITE), (x + 20, y + 50))
+            screen.blit(font.render(f"${w.price}", True, GREEN), (x + 40, y + 170))
+            screen.blit(font.render(f"[{i + 1}]", True, WHITE), (x + 70, y + 190))
+
+        screen.blit(font.render("SPACE - продать камни", True, WHITE),
+                    (WIDTH // 2 - 200, HEIGHT // 2 + 120))
+        screen.blit(font.render("H - восстановить здоровье (30$)", True, WHITE),
+                    (WIDTH // 2 - 200, HEIGHT // 2 + 160))
+        screen.blit(font.render("F - улучшить мешок (50$)", True, WHITE),
+                    (WIDTH // 2 - 200, HEIGHT // 2 + 200))
 
     # экран обучения
     if tutorial:
